@@ -18,24 +18,53 @@ class Lopta:
         self.x += self.vel_x
         self.y += self.vel_y
 
-        if self.x - self.radius < 0 or self.x + self.radius > SIRKA_OKNA:
+        # Kolízia s ľavou stenou
+        if self.x - self.radius < 0:
+            self.x = self.radius
             self.vel_x *= -0.9
+        # Kolízia s pravou stenou
+        if self.x + self.radius > SIRKA_OKNA:
+            self.x = SIRKA_OKNA - self.radius
+            self.vel_x *= -0.9
+        # Kolízia so stropom
         if self.y - self.radius < 0:
+            self.y = self.radius
             self.vel_y *= -0.9
 
+        # Kolízia so sieťou
         net_left = SIRKA_OKNA//2 - SIRKA_SIETE//2
         net_right = SIRKA_OKNA//2 + SIRKA_SIETE//2
         net_top = VYSKA_OKNA - VYSKA_PODLAHY - VYSKA_SIETE
 
-        if net_left < self.x < net_right and self.y + self.radius > net_top:
-            self.vel_x *= -1
-            self.vel_y *= -0.7
+        # Kontrola či lopta koliduje so sieťou (vrátane polomeru)
+        if self.x + self.radius > net_left and self.x - self.radius < net_right:
+            if self.y + self.radius > net_top:
+                # Kolízia zhora (lopta dopadla na sieť)
+                if self.vel_y > 0 and self.y - self.radius < net_top:
+                    self.y = net_top - self.radius
+                    self.vel_y *= -0.7
+                # Kolízia zboku
+                else:
+                    if self.x < SIRKA_OKNA // 2:
+                        self.x = net_left - self.radius
+                    else:
+                        self.x = net_right + self.radius
+                    self.vel_x *= -0.9
 
         for h in hraci:
             dist = math.hypot(self.x - h.x, self.y - h.y)
-            if dist < self.radius + h.radius:
+            min_dist = self.radius + h.radius
+            if dist < min_dist and dist > 0:
+                # Vypočítaj uhol odrazu
                 angle = math.atan2(self.y - h.y, self.x - h.x)
-                speed = max(8, math.hypot(self.vel_x, self.vel_y))
+                
+                # Posuň loptu mimo hráča (aby sa nelepila)
+                overlap = min_dist - dist
+                self.x += math.cos(angle) * (overlap + 1)
+                self.y += math.sin(angle) * (overlap + 1)
+                
+                # Nastav rýchlosť odrazu
+                speed = max(10, math.hypot(self.vel_x, self.vel_y) * 1.1)
                 self.vel_x = math.cos(angle) * speed
                 self.vel_y = math.sin(angle) * speed
 
