@@ -7,8 +7,8 @@ pygame.init()
 screen = pygame.display.set_mode((SIRKA_OKNA, VYSKA_OKNA))
 clock = pygame.time.Clock()
 
-h1 = Hrac(150, "P1")
-h2 = Hrac(650, "P2")
+h1 = Hrac(150, "Yamal")
+h2 = Hrac(650, "Mbappe")
 lopta = Lopta()
 
 score_p1 = 0
