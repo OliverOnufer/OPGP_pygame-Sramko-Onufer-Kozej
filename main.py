@@ -1,4 +1,5 @@
-import pygame, sys
+import pygame, sys, random
+from pathlib import Path
 from settings import *
 from player import Hrac
 from ball import Lopta
@@ -12,6 +13,43 @@ clock = pygame.time.Clock()
 font_big = pygame.font.SysFont("arial", 64)
 font_small = pygame.font.SysFont("arial", 28)
 
+# Načítanie náhodného pozadia z priečinka backgrounds
+def load_random_background():
+    bg_folder = Path(__file__).parent / "backgrounds"
+    images = [f for ext in ("png", "jpg", "jpeg", "webp", "bmp") for f in bg_folder.glob(f"*.{ext}")]
+    if images:
+        try:
+            bg = pygame.image.load(random.choice(images)).convert()
+            return pygame.transform.scale(bg, (SIRKA_OKNA, VYSKA_OKNA))
+        except pygame.error:
+            return None
+    return None
+
+# Načítanie menu pozadia z priečinka menu_bg
+def load_menu_background():
+    bg_folder = Path(__file__).parent / "menu_bg"
+    images = [f for ext in ("png", "jpg", "jpeg", "webp", "bmp") for f in bg_folder.glob(f"*.{ext}")]
+    if images:
+        try:
+            bg = pygame.image.load(images[0]).convert()  # Prvý obrázok v priečinku
+            return pygame.transform.scale(bg, (SIRKA_OKNA, VYSKA_OKNA))
+        except pygame.error:
+            return None
+    return None
+
+# Vytvorenie gradientu pre zatmavenie pozadia
+def create_gradient_overlay():
+    overlay = pygame.Surface((SIRKA_OKNA, VYSKA_OKNA), pygame.SRCALPHA)
+    for y in range(VYSKA_OKNA):
+        # Gradient od vrchu (tmavší) po spodok (svetlejší)
+        alpha = int(120 - (y / VYSKA_OKNA) * 70)  # 120 hore, 50 dole
+        pygame.draw.line(overlay, (0, 0, 0, alpha), (0, y), (SIRKA_OKNA, y))
+    return overlay
+
+gradient_overlay = create_gradient_overlay()
+
+menu_background = load_menu_background()
+background = None
 
 h1 = Hrac(150, "Yamal")
 h2 = Hrac(650, "Mbappe")
@@ -55,6 +93,7 @@ while True:
                     score_p1 = 0
                     score_p2 = 0
                     lopta.reset(1)
+                    background = load_random_background()
                     state = "GAME"
                 if event.key == pygame.K_ESCAPE:
                     pygame.quit()
@@ -64,7 +103,17 @@ while True:
                 if event.key == pygame.K_RETURN:
                     state = "MENU"
 
-    screen.fill(CIERNA)
+    if state == "MENU" or state == "GAME_OVER":
+        if menu_background:
+            screen.blit(menu_background, (0, 0))
+        else:
+            screen.fill(CIERNA)
+    else:
+        if background:
+            screen.blit(background, (0, 0))
+            screen.blit(gradient_overlay, (0, 0))
+        else:
+            screen.fill(CIERNA)
 
     if state == "MENU":
         draw_menu()
@@ -90,8 +139,6 @@ while True:
             winner_text = "MBAPPE WINS!"
             state = "GAME_OVER"
 
-        pygame.draw.rect(screen, SEDA,
-                         (0, VYSKA_OKNA - VYSKA_PODLAHY, SIRKA_OKNA, VYSKA_PODLAHY))
         pygame.draw.rect(screen, SEDA,
                          (SIRKA_OKNA // 2 - SIRKA_SIETE // 2,
                           VYSKA_OKNA - VYSKA_PODLAHY - VYSKA_SIETE,

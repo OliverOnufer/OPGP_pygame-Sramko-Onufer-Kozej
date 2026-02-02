@@ -1,11 +1,25 @@
 import pygame
 import math
+from pathlib import Path
 from settings import *
 
 class Lopta:
     def __init__(self):
         self.radius = POLOMER_LOPTY
+        self.image = self.load_ball_image()
         self.reset(1)
+
+    def load_ball_image(self):
+        img_folder = Path(__file__).parent / "images"
+        for ext in ("png", "jpg", "jpeg", "webp", "bmp"):
+            for img_path in img_folder.glob(f"ball.{ext}"):
+                try:
+                    img = pygame.image.load(img_path).convert_alpha()
+                    size = self.radius * 2
+                    return pygame.transform.scale(img, (size, size))
+                except pygame.error:
+                    pass
+        return None
 
     def reset(self, side):
         self.x = 200 if side == 1 else SIRKA_OKNA - 200
@@ -69,4 +83,7 @@ class Lopta:
                 self.vel_y = math.sin(angle) * speed
 
     def draw(self, screen):
-        pygame.draw.circle(screen, ZLTA, (int(self.x), int(self.y)), self.radius)
+        if self.image:
+            screen.blit(self.image, (int(self.x - self.radius), int(self.y - self.radius)))
+        else:
+            pygame.draw.circle(screen, ZLTA, (int(self.x), int(self.y)), self.radius)
