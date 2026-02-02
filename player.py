@@ -1,9 +1,26 @@
 import pygame
 import math
+from pathlib import Path
 from settings import *
 
+# Načítanie zvuku skoku
+def load_jump_sound():
+    sound_folder = Path(__file__).parent / "sounds"
+    for ext in ("wav", "mp3", "ogg"):
+        sound_path = sound_folder / f"jump.{ext}"
+        if sound_path.exists():
+            try:
+                return pygame.mixer.Sound(sound_path)
+            except pygame.error:
+                pass
+    return None
+
 class Hrac:
+    jump_sound = None
+    
     def __init__(self, x, meno):
+        if Hrac.jump_sound is None:
+            Hrac.jump_sound = load_jump_sound()
         self.x = x
         self.y = VYSKA_OKNA - VYSKA_PODLAHY - POLOMER_HRACA
         self.radius = POLOMER_HRACA
@@ -36,6 +53,8 @@ class Hrac:
         if keys[KEY_MAP[f"{self.meno}_JUMP"]] and self.na_zemi:
             self.vel_y = SILA_SKOKU
             self.na_zemi = False
+            if Hrac.jump_sound:
+                Hrac.jump_sound.play()
 
         self.vel_y += GRAVITACIA
         self.y += self.vel_y
@@ -119,4 +138,4 @@ class Hrac:
         # Meno hráča
         font = pygame.font.Font(None, 24)
         text = font.render(self.meno, True, BIELA)
-        screen.blit(text, (x - 25, y - 50))
+        screen.blit(text, (x - 25, y - 60))

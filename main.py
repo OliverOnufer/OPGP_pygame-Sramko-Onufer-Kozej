@@ -48,6 +48,38 @@ def create_gradient_overlay():
 
 gradient_overlay = create_gradient_overlay()
 
+# Načítanie zvukov
+def load_sound(name):
+    sound_folder = Path(__file__).parent / "sounds"
+    for ext in ("wav", "mp3", "ogg"):
+        sound_path = sound_folder / f"{name}.{ext}"
+        if sound_path.exists():
+            try:
+                return pygame.mixer.Sound(sound_path)
+            except pygame.error:
+                pass
+    return None
+
+# Načítanie hudby do pozadia
+def load_music():
+    sound_folder = Path(__file__).parent / "sounds"
+    for ext in ("wav", "mp3", "ogg"):
+        music_path = sound_folder / f"music.{ext}"
+        if music_path.exists():
+            try:
+                pygame.mixer.music.load(music_path)
+                pygame.mixer.music.set_volume(0.3)
+                return True
+            except pygame.error:
+                pass
+    return False
+
+sound_point = load_sound("point")
+sound_click = load_sound("click")
+sound_jump = load_sound("jump")
+sound_gameover = load_sound("gameover")
+has_music = load_music()
+
 menu_background = load_menu_background()
 background = None
 
@@ -94,6 +126,8 @@ while True:
                     score_p2 = 0
                     lopta.reset(1)
                     background = load_random_background()
+                    if has_music:
+                        pygame.mixer.music.play(-1)  # -1 = loop
                     state = "GAME"
                 if event.key == pygame.K_ESCAPE:
                     pygame.quit()
@@ -125,6 +159,8 @@ while True:
         lopta.update([h1, h2])
 
         if lopta.y + lopta.radius > VYSKA_OKNA - VYSKA_PODLAHY:
+            if sound_point:
+                sound_point.play()
             if lopta.x < SIRKA_OKNA // 2:
                 score_p2 += 1
                 lopta.reset(2)
@@ -134,9 +170,15 @@ while True:
 
         if score_p1 >= WIN_SCORE:
             winner_text = "YAMAL WINS!"
+            pygame.mixer.music.stop()
+            if sound_gameover:
+                sound_gameover.play()
             state = "GAME_OVER"
         elif score_p2 >= WIN_SCORE:
             winner_text = "MBAPPE WINS!"
+            pygame.mixer.music.stop()
+            if sound_gameover:
+                sound_gameover.play()
             state = "GAME_OVER"
 
         pygame.draw.rect(screen, SEDA,
@@ -154,3 +196,4 @@ while True:
 
     pygame.display.flip()
     clock.tick(FPS)
+

@@ -3,8 +3,24 @@ import math
 from pathlib import Path
 from settings import *
 
+# Načítanie zvuku dotyku lopty
+def load_click_sound():
+    sound_folder = Path(__file__).parent / "sounds"
+    for ext in ("wav", "mp3", "ogg"):
+        sound_path = sound_folder / f"click.{ext}"
+        if sound_path.exists():
+            try:
+                return pygame.mixer.Sound(sound_path)
+            except pygame.error:
+                pass
+    return None
+
 class Lopta:
+    click_sound = None
+    
     def __init__(self):
+        if Lopta.click_sound is None:
+            Lopta.click_sound = load_click_sound()
         self.radius = POLOMER_LOPTY
         self.image = self.load_ball_image()
         self.reset(1)
@@ -23,14 +39,17 @@ class Lopta:
 
     def reset(self, side):
         self.x = 200 if side == 1 else SIRKA_OKNA - 200
-        self.y = 200
+        self.y = 425
         self.vel_x = 0
         self.vel_y = 0
+        self.waiting = True  # Čaká na dotyk hráča
 
     def update(self, hraci):
-        self.vel_y += GRAVITACIA * 0.6
-        self.x += self.vel_x
-        self.y += self.vel_y
+        # Ak lopta čaká, nehybe sa - len kontroluje kolíziu s hráčmi
+        if not self.waiting:
+            self.vel_y += GRAVITACIA * 0.6
+            self.x += self.vel_x
+            self.y += self.vel_y
 
         # Kolízia s ľavou stenou
         if self.x - self.radius < 0:
@@ -69,6 +88,13 @@ class Lopta:
             dist = math.hypot(self.x - h.x, self.y - h.y)
             min_dist = self.radius + h.radius
             if dist < min_dist and dist > 0:
+                if Lopta.click_sound:
+                    Lopta.click_sound.play()
+                
+                # Ak lopta čakala, teraz sa začne hýbať
+                if self.waiting:
+                    self.waiting = False
+                
                 # Vypočítaj uhol odrazu
                 angle = math.atan2(self.y - h.y, self.x - h.x)
                 
@@ -77,8 +103,9 @@ class Lopta:
                 self.x += math.cos(angle) * (overlap + 1)
                 self.y += math.sin(angle) * (overlap + 1)
                 
-                # Nastav rýchlosť odrazu
-                speed = max(10, math.hypot(self.vel_x, self.vel_y) * 1.1)
+                # Nastav rýchlosť odrazu - vyššia minimálna rýchlosť
+                current_speed = math.hypot(self.vel_x, self.vel_y)
+                speed = max(12, current_speed * 1.1)  # Minimálne 12
                 self.vel_x = math.cos(angle) * speed
                 self.vel_y = math.sin(angle) * speed
 
@@ -87,3 +114,4 @@ class Lopta:
             screen.blit(self.image, (int(self.x - self.radius), int(self.y - self.radius)))
         else:
             pygame.draw.circle(screen, ZLTA, (int(self.x), int(self.y)), self.radius)
+            
