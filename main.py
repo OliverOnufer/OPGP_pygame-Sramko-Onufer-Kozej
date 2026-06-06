@@ -158,13 +158,27 @@ while True:
         h2.update(keys)
         lopta.update([h1, h2])
 
-        if lopta.y + lopta.radius > VYSKA_OKNA - VYSKA_PODLAHY:
+        # Kontrola či hráč prekročil limit 3 dotykov bez aby lopta prešla na druhú stranu
+        if lopta.touch_count > 3:
             if sound_point:
                 sound_point.play()
             if lopta.x < SIRKA_OKNA // 2:
+                # Yamal urobil chybu - dotknul sa 4+ krát na svojej strane
+                score_p2 += 1  # Bod pre Mbappe
+                lopta.reset(2)
+            else:
+                # Mbappe urobil chybu - dotknul sa 4+ krát na svojej strane
+                score_p1 += 1  # Bod pre Yamala
+                lopta.reset(1)
+        elif lopta.y + lopta.radius > VYSKA_OKNA - VYSKA_PODLAHY:
+            if sound_point:
+                sound_point.play()
+            if lopta.x < SIRKA_OKNA // 2:
+                # Lopta padla na ľavej strane (bez prekročenia limitu dotykov)
                 score_p2 += 1
                 lopta.reset(2)
             else:
+                # Lopta padla na pravej strane (bez prekročenia limitu dotykov)
                 score_p1 += 1
                 lopta.reset(1)
 

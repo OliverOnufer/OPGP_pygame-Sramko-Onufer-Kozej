@@ -43,6 +43,8 @@ class Lopta:
         self.vel_x = 0
         self.vel_y = 0
         self.waiting = True  # Čaká na dotyk hráča
+        self.touch_count = 0  # Počítadlo dotykov na momentálnej strane
+        self.current_side = side  # 1 = ľavá strana (Yamal), 2 = pravá strana (Mbappe)
 
     def update(self, hraci):
         # Ak lopta čaká, nehybe sa - len kontroluje kolíziu s hráčmi
@@ -50,6 +52,18 @@ class Lopta:
             self.vel_y += GRAVITACIA * 0.6
             self.x += self.vel_x
             self.y += self.vel_y
+
+        # Kontrola či lopta prešla na druhú stranu - reset touch_count
+        net_x = SIRKA_OKNA // 2
+        prev_side = self.current_side
+        if self.x < net_x:
+            self.current_side = 1
+        else:
+            self.current_side = 2
+        
+        # Ak lopta prešla na druhú stranu, resetuj počítadlo
+        if prev_side != self.current_side:
+            self.touch_count = 0
 
         # Kolízia s ľavou stenou
         if self.x - self.radius < 0:
@@ -94,6 +108,9 @@ class Lopta:
                 # Ak lopta čakala, teraz sa začne hýbať
                 if self.waiting:
                     self.waiting = False
+                
+                # Zvýš počítadlo dotykov
+                self.touch_count += 1
                 
                 # Vypočítaj uhol odrazu
                 angle = math.atan2(self.y - h.y, self.x - h.x)
