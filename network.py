@@ -4,7 +4,7 @@ import pickle
 class Network:
     def __init__(self):
         self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server = "172.20.10.9" # Zmeňte na IP v LAN, ak hráte na 2 PC (napr. "192.168.1.5")
+        self.server = "192.168.1.206" # Zmeňte na IP v LAN, ak hráte na 2 PC (napr. "192.168.1.5")
         self.port = 8001
         self.addr = (self.server, self.port)
         self.p = self.connect() # id hraca (0 alebo 1)
