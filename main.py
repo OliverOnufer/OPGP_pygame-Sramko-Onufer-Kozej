@@ -92,9 +92,22 @@ WIN_SCORE = 10
 
 state = "MENU"
 winner_text = ""
+connected_players = 0
 
 # Premenná na sledovanie zmien skóre (kvôli zvuku u klienta)
 last_score_sum = 0
+
+def start_game():
+    global score_p1, score_p2, last_score_sum, background, state
+    score_p1 = 0
+    score_p2 = 0
+    last_score_sum = 0
+    lopta.reset(1)
+    background = load_random_background()
+    if has_music:
+        pygame.mixer.music.play(-1)
+    state = "GAME"
+
 
 def draw_score(p1, p2):
     text = font_small.render(f"{p1} : {p2}", True, BIELA)
@@ -103,6 +116,16 @@ def draw_score(p1, p2):
 def draw_menu():
     title = font_big.render("ARCADE VOLLEYBALL", True, BIELA)
     info = font_small.render("ENTER - START | ESC - QUIT", True, SEDA)
+    screen.blit(title, (SIRKA_OKNA // 2 - title.get_width() // 2, 220))
+    screen.blit(info, (SIRKA_OKNA // 2 - info.get_width() // 2, 300))
+
+def draw_waiting():
+    if connected_players < 2:
+        title = font_big.render("Čaká sa na hráča...", True, BIELA)
+        info = font_small.render("Počkaj, kým sa pripojí druhý hráč", True, SEDA)
+    else:
+        title = font_big.render("Druhý hráč je pripojený!", True, BIELA)
+        info = font_small.render("Stlač ENTER pre začatie hry", True, SEDA)
     screen.blit(title, (SIRKA_OKNA // 2 - title.get_width() // 2, 220))
     screen.blit(info, (SIRKA_OKNA // 2 - info.get_width() // 2, 300))
 
@@ -127,14 +150,23 @@ while True:
         if event.type == pygame.KEYDOWN:
             if state == "MENU":
                 if event.key == pygame.K_RETURN:
-                    score_p1 = 0
-                    score_p2 = 0
-                    last_score_sum = 0
-                    lopta.reset(1)
-                    background = load_random_background()
-                    if has_music:
-                        pygame.mixer.music.play(-1)
-                    state = "GAME"
+                    if connected_players == 2:
+                        server_data = n.send({"start_game": True})
+                        if server_data:
+                            connected_players = server_data.get("players_connected", connected_players)
+                        start_game()
+                    else:
+                        state = "WAITING"
+                if event.key == pygame.K_ESCAPE:
+                    pygame.quit()
+                    sys.exit()
+
+            elif state == "WAITING":
+                if event.key == pygame.K_RETURN and connected_players == 2:
+                    server_data = n.send({"start_game": True})
+                    if server_data:
+                        connected_players = server_data.get("players_connected", connected_players)
+                    start_game()
                 if event.key == pygame.K_ESCAPE:
                     pygame.quit()
                     sys.exit()
@@ -142,8 +174,10 @@ while True:
             elif state == "GAME_OVER":
                 if event.key == pygame.K_RETURN:
                     state = "MENU"
+                    if player_id is not None:
+                        n.send({"reset_start": True})
 
-    if state == "MENU" or state == "GAME_OVER":
+    if state in ("MENU", "WAITING", "GAME_OVER"):
         if menu_background:
             screen.blit(menu_background, (0, 0))
         else:
@@ -155,8 +189,18 @@ while True:
         else:
             screen.fill(CIERNA)
 
+    if state in ("MENU", "WAITING") and player_id is not None:
+        status_data = {"status": True}
+        server_data = n.send(status_data)
+        if server_data:
+            connected_players = server_data.get("players_connected", connected_players)
+            if state == "WAITING" and server_data.get("start_game"):
+                start_game()
+
     if state == "MENU":
         draw_menu()
+    elif state == "WAITING":
+        draw_waiting()
 
     elif state == "GAME":
         keys = pygame.key.get_pressed()
@@ -202,6 +246,7 @@ while True:
                 server_data = n.send(data)
                 
                 if server_data:
+                    connected_players = server_data.get("players_connected", connected_players)
                     h2.x, h2.y = server_data[1]["x"], server_data[1]["y"]
                     h2.animation_time = server_data[1]["anim"]
                     h2.na_zemi = server_data[1]["na_zemi"]
@@ -213,6 +258,7 @@ while True:
                 server_data = n.send(data)
 
                 if server_data:
+                    connected_players = server_data.get("players_connected", connected_players)
                     h1.x, h1.y = server_data[0]["x"], server_data[0]["y"]
                     h1.animation_time = server_data[0]["anim"]
                     h1.na_zemi = server_data[0]["na_zemi"]

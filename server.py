@@ -21,10 +21,16 @@ game_state = {
     1: {"x": 650, "y": 425, "anim": 0, "na_zemi": True}, # Dátový paket Hráča 2
     "ball": {"x": 200, "y": 425, "vel_x": 0, "vel_y": 0, "waiting": True},
     "score": [0, 0],
-    "game_over": False
+    "game_over": False,
+    "players_connected": 0,
+    "start_game": False
 }
 
+players_connected = 0
+connections = [None, None]
+
 def threaded_client(conn, player):
+    global players_connected
     conn.send(pickle.dumps(player))
     reply = ""
     while True:
@@ -37,6 +43,10 @@ def threaded_client(conn, player):
                 # Update statusu na serveri na základe toho, čo poslal klient
                 if "hrac" in data:
                     game_state[player] = data["hrac"]
+                if "start_game" in data and data["start_game"]:
+                    game_state["start_game"] = True
+                if "reset_start" in data and data["reset_start"]:
+                    game_state["start_game"] = False
                 
                 # Klient 0 (Yamal) spravuje všetku logiku pre loptičku
                 if player == 0:
@@ -53,13 +63,22 @@ def threaded_client(conn, player):
         except:
             break
             
+    players_connected -= 1
+    game_state["players_connected"] = players_connected
+    game_state["ball"]["waiting"] = True
+    game_state["start_game"] = False
+    connections[player] = None
     print(f"Spojenie stratené s hráčom {player}")
     conn.close()
 
-player_count = 0
 while True:
     conn, addr = s.accept()
     print("Prepojné k:", addr)
-    if player_count < 2:
-        threading.Thread(target=threaded_client, args=(conn, player_count)).start()
-        player_count += 1
+    if players_connected < 2:
+        player = players_connected
+        connections[player] = conn
+        threading.Thread(target=threaded_client, args=(conn, player)).start()
+        players_connected += 1
+        game_state["players_connected"] = players_connected
+        if players_connected == 2:
+            game_state["ball"]["waiting"] = False
